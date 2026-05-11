@@ -1,3 +1,5 @@
+// 控制單一流程按鈕，讓使用者依序啟動天然氣供應、鍋爐、蒸氣循環、冷卻系統、電力輸出與燈泡
+
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,9 +17,9 @@ public class StepButtonController : MonoBehaviour
     public Button button;
 
     [Header("每一步 Loading 時間")]
-    public float fuelLoadingTime = 1.5f;
+    public float gasLoadingTime = 1.5f;
     public float boilerLoadingTime = 2.0f;
-    public float steamLoadingTime = 2.0f;
+    public float steamLoadingTime = 2.5f;
     public float coolingLoadingTime = 1.5f;
     public float electricityLoadingTime = 2.0f;
     public float lightbulbLoadingTime = 1.0f;
@@ -57,8 +59,8 @@ public class StepButtonController : MonoBehaviour
         switch (currentStep)
         {
             case 0:
-                controller.StartFuel();
-                waitTime = fuelLoadingTime;
+                controller.StartGas();
+                waitTime = gasLoadingTime;
                 break;
 
             case 1:
@@ -105,7 +107,6 @@ public class StepButtonController : MonoBehaviour
         yield return new WaitForSeconds(waitTime);
 
         currentStep++;
-
         isRunning = false;
 
         if (button != null)
@@ -123,11 +124,11 @@ public class StepButtonController : MonoBehaviour
         switch (currentStep)
         {
             case 0:
-                buttonText.text = "Start Fuel";
+                buttonText.text = "Start Gas Supply";
                 break;
 
             case 1:
-                buttonText.text = "Start Boiler";
+                buttonText.text = "Start Boiler / HRSG";
                 break;
 
             case 2:
@@ -152,9 +153,11 @@ public class StepButtonController : MonoBehaviour
         }
     }
 
-    // 如果你之後想加 Reset 按鈕，可以呼叫這個
+    // Reset 按鈕可以呼叫這個
     public void ResetSteps()
     {
+        StopAllCoroutines();
+
         currentStep = 0;
         isRunning = false;
 

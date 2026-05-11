@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 public class CameraController : MonoBehaviour
 {
     public float moveSpeed = 10f;
-    public float mouseSensitivity = 200f;
+    public float mouseSensitivity = 100f;
 
     float xRotation = 0f;
 
