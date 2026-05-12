@@ -22,6 +22,31 @@ public class FuelPowerController : MonoBehaviour
         public float maxRate = 100f;
     }
 
+    [System.Serializable]
+    public class ElectricLineControl
+    {
+        [Header("方便辨識用名稱")]
+        public string name;
+
+        [Header("要控制的 Line Renderer")]
+        public LineRenderer lineRenderer;
+
+        [Header("Gas = 0% 時的線寬")]
+        public float minWidth = 0.02f;
+
+        [Header("Gas = 100% 時的線寬")]
+        public float maxWidth = 0.08f;
+
+        [Header("電線發光材質")]
+        public Material lineMaterial;
+
+        [Header("Gas = 100% 時的 Emission 強度")]
+        public float maxEmissionIntensity = 3f;
+
+        [Header("發光顏色")]
+        public Color emissionColor = new Color(1f, 0.85f, 0.3f);
+    }
+
     [Header("UI 元件")]
     public Slider gasSlider;
     public TextMeshProUGUI gasValueText;
@@ -61,6 +86,9 @@ public class FuelPowerController : MonoBehaviour
     [Header("各段蒸氣 / 煙霧 / 水氣 Emission 控制")]
     public ParticleRateControl[] particleRateControls;
 
+    [Header("電流 LineRenderer 控制")]
+    public ElectricLineControl[] electricLineControls;
+
     private bool lightbulbActivated = false;
 
     void Start()
@@ -78,6 +106,7 @@ public class FuelPowerController : MonoBehaviour
         UpdateHRSGFire();
         UpdateControlledParticles();
         DeactivateLightbulb();
+        UpdateElectricLines();
     }
 
     public void OnGasSliderChanged(float value)
@@ -88,6 +117,7 @@ public class FuelPowerController : MonoBehaviour
         UpdateNaturalGasFlow();
         UpdateHRSGFire();
         UpdateControlledParticles();
+        UpdateElectricLines();
 
         if (lightbulbActivated)
         {
@@ -219,6 +249,31 @@ public class FuelPowerController : MonoBehaviour
         if (lightOnMaterial != null)
         {
             lightOnMaterial.SetColor("_EmissionColor", Color.black);
+        }
+    }
+
+    private void UpdateElectricLines()
+    {
+        if (electricLineControls == null)
+            return;
+
+        float t = gasPercent / 100f;
+
+        foreach (ElectricLineControl item in electricLineControls)
+        {
+            if (item == null || item.lineRenderer == null)
+                continue;
+
+            float width = Mathf.Lerp(item.minWidth, item.maxWidth, t);
+
+            item.lineRenderer.startWidth = width;
+            item.lineRenderer.endWidth = width;
+
+            if (item.lineMaterial != null)
+            {
+                Color finalEmission = item.emissionColor * Mathf.Lerp(0f, item.maxEmissionIntensity, t);
+                item.lineMaterial.SetColor("_EmissionColor", finalEmission);
+            }
         }
     }
 }
