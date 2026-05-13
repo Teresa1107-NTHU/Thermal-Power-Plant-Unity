@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class TourCameraLook : MonoBehaviour
 {
@@ -47,8 +48,10 @@ public class TourCameraLook : MonoBehaviour
 
     void HandleRotation()
     {
-        // 按住滑鼠左鍵旋轉
-        if (Input.GetMouseButton(0))
+        // 按住左鍵旋轉
+        // 滑鼠在 UI 上時不旋轉
+        if (Input.GetMouseButton(0)
+            && !EventSystem.current.IsPointerOverGameObject())
         {
             float mouseX =
                 Input.GetAxis("Mouse X") *
@@ -62,7 +65,6 @@ public class TourCameraLook : MonoBehaviour
 
             pitch -= mouseY;
 
-            // 限制上下視角
             pitch =
                 Mathf.Clamp(
                     pitch,

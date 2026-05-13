@@ -49,10 +49,16 @@ public class GuidedTourController : MonoBehaviour
 
     private Coroutine moveRoutine;
 
+    [Header("初始相機位置")]
+    public Transform startCameraPoint;
+
     void Start()
     {
         ResetTour();
     }
+
+    [Header("控制滑桿")]
+    public Slider controlSlider;
 
     public void NextStep()
     {
@@ -112,6 +118,26 @@ public class GuidedTourController : MonoBehaviour
         nextButtonText.text = "Start";
 
         previousButton.interactable = false;
+
+        // Slider 回到 50%
+        if (controlSlider != null)
+        {
+            controlSlider.value = 50f;
+        }
+
+        // 回到初始畫面
+        if (startCameraPoint != null)
+        {
+            if (moveRoutine != null)
+            {
+                StopCoroutine(moveRoutine);
+            }
+
+            moveRoutine =
+                StartCoroutine(
+                    MoveCamera(startCameraPoint)
+                );
+        }
     }
 
     public void ShowStep(int index)
