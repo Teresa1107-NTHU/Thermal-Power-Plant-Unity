@@ -1,41 +1,105 @@
+// 控制相機視角：按住滑鼠左鍵旋轉視角，使用滾輪縮放
+
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 public class CameraController : MonoBehaviour
 {
-    public float moveSpeed = 10f;
+    [Header("滑鼠旋轉速度")]
     public float mouseSensitivity = 100f;
 
-    float xRotation = 0f;
+    [Header("滾輪縮放速度")]
+    public float zoomSpeed = 20f;
+
+    [Header("最小視野，數字越小越放大")]
+    public float minFOV = 30f;
+
+    [Header("最大視野，數字越大越廣角")]
+    public float maxFOV = 70f;
+
+    private Camera cam;
+
+    private float xRotation;
+    private float yRotation;
+
+    // 避免重新啟用時滑鼠暴衝
+    private bool ignoreNextFrame = false;
 
     void Start()
     {
-        // Cursor.lockState = CursorLockMode.Locked;
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        cam = GetComponentInChildren<Camera>();
+
+        SyncRotationWithCamera();
+
+        if (cam != null)
+        {
+            cam.fieldOfView =
+                Mathf.Clamp(cam.fieldOfView, minFOV, maxFOV);
+        }
     }
 
     void Update()
     {
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        // 忽略重新啟用的第一幀
+        if (ignoreNextFrame)
         {
+            ignoreNextFrame = false;
             return;
         }
 
-        // 滑鼠控制視角
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
+        // 左鍵旋轉
+        if (Input.GetMouseButton(0))
+        {
+            float mouseX =
+                Input.GetAxis("Mouse X") *
+                mouseSensitivity *
+                Time.deltaTime;
 
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+            float mouseY =
+                Input.GetAxis("Mouse Y") *
+                mouseSensitivity *
+                Time.deltaTime;
 
-        transform.localRotation = Quaternion.Euler(xRotation, transform.localEulerAngles.y + mouseX, 0f);
+            yRotation += mouseX;
+            xRotation -= mouseY;
 
-        // 鍵盤移動
-        float x = Input.GetAxis("Horizontal");
-        float z = Input.GetAxis("Vertical");
+            // 限制上下視角
+            xRotation = Mathf.Clamp(xRotation, -80f, 80f);
 
-        Vector3 move = transform.right * x + transform.forward * z;
-        transform.position += move * moveSpeed * Time.deltaTime;
+            transform.rotation =
+                Quaternion.Euler(xRotation, yRotation, 0f);
+        }
+
+        // 滾輪縮放
+        if (cam != null)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+
+            if (Mathf.Abs(scroll) > 0.001f)
+            {
+                cam.fieldOfView -= scroll * zoomSpeed;
+
+                cam.fieldOfView =
+                    Mathf.Clamp(cam.fieldOfView, minFOV, maxFOV);
+            }
+        }
+    }
+
+    // 導覽系統用來同步角度
+    public void SyncRotationWithCamera()
+    {
+        Vector3 angles = transform.rotation.eulerAngles;
+
+        yRotation = angles.y;
+
+        xRotation = angles.x;
+
+        // 修正 Unity Euler 角度問題
+        if (xRotation > 180f)
+        {
+            xRotation -= 360f;
+        }
+
+        // 忽略下一幀輸入
+        ignoreNextFrame = true;
     }
 }

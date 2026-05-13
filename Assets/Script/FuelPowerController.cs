@@ -1,4 +1,4 @@
-// 控制天然氣滑桿數值，並用滑桿控制天然氣流量、HRSG火焰、各段蒸氣/煙霧流量，以及燈泡亮度
+// 控制天然氣輸入滑桿、燈泡亮度、Emission 發光、天然氣流動、蒸氣流動與 HRSG 火焰效果
 
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,210 +6,268 @@ using TMPro;
 
 public class FuelPowerController : MonoBehaviour
 {
-    [System.Serializable]
-    public class ParticleRateControl
-    {
-        [Header("方便辨識用名稱")]
-        public string name;
+    // =========================
+    // UI 元件
+    // =========================
 
-        [Header("要控制的 Particle System")]
-        public ParticleSystem particle;
-
-        [Header("Gas = 0% 時的 Emission Rate")]
-        public float minRate = 0f;
-
-        [Header("Gas = 100% 時的 Emission Rate")]
-        public float maxRate = 100f;
-    }
-
-    [System.Serializable]
-    public class ElectricLineControl
-    {
-        [Header("方便辨識用名稱")]
-        public string name;
-
-        [Header("要控制的 Line Renderer")]
-        public LineRenderer lineRenderer;
-
-        [Header("Gas = 0% 時的線寬")]
-        public float minWidth = 0.02f;
-
-        [Header("Gas = 100% 時的線寬")]
-        public float maxWidth = 0.08f;
-
-        [Header("電線發光材質")]
-        public Material lineMaterial;
-
-        [Header("Gas = 100% 時的 Emission 強度")]
-        public float maxEmissionIntensity = 3f;
-
-        [Header("發光顏色")]
-        public Color emissionColor = new Color(1f, 0.85f, 0.3f);
-    }
-
-    [Header("UI 元件")]
+    [Header("天然氣滑桿")]
     public Slider gasSlider;
+
+    [Header("顯示天然氣百分比文字")]
     public TextMeshProUGUI gasValueText;
+
+    // =========================
+    // 天然氣輸入百分比
+    // =========================
 
     [Header("目前天然氣輸入百分比")]
     [Range(0f, 100f)]
     public float gasPercent = 50f;
 
-    [Header("燈泡控制")]
+    // =========================
+    // 燈泡控制
+    // =========================
+
+    [Header("燈泡 Renderer")]
     public Renderer bulbRenderer;
+
+    [Header("燈泡未通電時的玻璃材質")]
     public Material glassMaterial;
+
+    [Header("燈泡通電時的發光材質")]
     public Material lightOnMaterial;
+
+    [Header("燈泡 Point Light")]
     public Light bulbLight;
 
-    [Header("燈泡亮度範圍")]
+    // 執行時複製出來的材質
+    // 避免直接修改原本 Material Asset
+    private Material runtimeLightMaterial;
+
+    // =========================
+    // 燈泡亮度設定
+    // =========================
+
+    [Header("燈泡最小亮度")]
     public float minLightIntensity = 0f;
+
+    [Header("燈泡最大亮度")]
     public float maxLightIntensity = 5f;
+
+    [Header("Emission 最亮強度")]
     public float maxEmissionIntensity = 5f;
+
+    // =========================
+    // 燈泡發光顏色
+    // =========================
 
     [Header("燈泡發光顏色")]
     public Color emissionColor = new Color(1f, 0.85f, 0.4f);
 
+    // =========================
+    // 天然氣流動 Particle
+    // =========================
+
     [Header("天然氣流動 Particle")]
     public ParticleSystem naturalGasFlow;
 
-    [Header("天然氣流量範圍")]
+    [Header("天然氣最小流量")]
     public float minGasEmissionRate = 0f;
+
+    [Header("天然氣最大流量")]
     public float maxGasEmissionRate = 60f;
+
+    // =========================
+    // 蒸氣流動 Particle
+    // =========================
+
+    [Header("蒸氣 Particle")]
+    public ParticleSystem[] steamFlows;
+
+    [Header("蒸氣最小流量")]
+    public float minSteamEmissionRate = 0f;
+
+    [Header("蒸氣最大流量")]
+    public float maxSteamEmissionRate = 150f;
+
+    // =========================
+    // 冷卻水循環 Particle
+    // =========================
+
+    [Header("冷卻水 Particle")]
+    public ParticleSystem[] coolingWaterFlows;
+
+    [Header("冷卻水最小流量")]
+    public float minCoolingEmissionRate = 0f;
+
+    [Header("冷卻水最大流量")]
+    public float maxCoolingEmissionRate = 120f;
+
+    // =========================
+    // HRSG 火焰 Particle
+    // =========================
 
     [Header("HRSG 火焰 Particle")]
     public ParticleSystem hrsgFire;
 
-    [Header("HRSG 火焰 Rate over Time 範圍")]
+    [Header("火焰最小噴發量")]
     public float minFireEmissionRate = 0f;
+
+    [Header("火焰最大噴發量")]
     public float maxFireEmissionRate = 300f;
 
-    [Header("各段蒸氣 / 煙霧 / 水氣 Emission 控制")]
-    public ParticleRateControl[] particleRateControls;
-
-    [Header("電流 LineRenderer 控制")]
-    public ElectricLineControl[] electricLineControls;
+    // =========================
+    // 是否允許燈泡亮起
+    // 只有按下 Turn On Lightbulb 後才會變 true
+    // =========================
 
     private bool lightbulbActivated = false;
 
+    // =========================
+    // Start
+    // 遊戲開始時初始化
+    // =========================
+
     void Start()
     {
+        // 複製一份燈泡材質
+        // 避免直接修改原本 Material Asset
+        if (lightOnMaterial != null)
+        {
+            runtimeLightMaterial = new Material(lightOnMaterial);
+        }
+
+        // 初始化 Slider
         if (gasSlider != null)
         {
             gasSlider.minValue = 0f;
             gasSlider.maxValue = 100f;
+
+            // 初始值
             gasSlider.value = gasPercent;
+
+            // 監聽 Slider 變化
             gasSlider.onValueChanged.AddListener(OnGasSliderChanged);
         }
 
+        // 更新 UI
         UpdateGasUI();
+
+        // 關閉燈泡
+        TurnOffLightbulbVisual();
+
+        // 更新天然氣流量
         UpdateNaturalGasFlow();
+
+        // 更新蒸氣流量
+        UpdateSteamFlow();
+
+        // 更新冷卻水流量
+        UpdateCoolingWaterFlow();
+
+        // 更新火焰流量
         UpdateHRSGFire();
-        UpdateControlledParticles();
-        DeactivateLightbulb();
-        UpdateElectricLines();
     }
+
+    // =========================
+    // Slider 被拖曳時
+    // =========================
 
     public void OnGasSliderChanged(float value)
     {
+        // 更新天然氣百分比
         gasPercent = value;
 
+        // 更新 UI
         UpdateGasUI();
-        UpdateNaturalGasFlow();
-        UpdateHRSGFire();
-        UpdateControlledParticles();
-        UpdateElectricLines();
 
+        // 如果燈泡已經啟動
+        // 才允許調整亮度
         if (lightbulbActivated)
         {
             UpdateLightbulbBrightness();
         }
+
+        // 更新天然氣流量
+        UpdateNaturalGasFlow();
+
+        // 更新蒸氣流量
+        UpdateSteamFlow();
+
+        // 更新冷卻水流量
+        UpdateCoolingWaterFlow();
+
+        // 更新火焰
+        UpdateHRSGFire();
     }
 
-    public void ActivateLightbulb()
-    {
-        lightbulbActivated = true;
-        UpdateLightbulbBrightness();
-    }
-
-    public void DeactivateLightbulb()
-    {
-        lightbulbActivated = false;
-        TurnOffLightbulbVisual();
-    }
+    // =========================
+    // 更新天然氣百分比文字
+    // =========================
 
     private void UpdateGasUI()
     {
         if (gasValueText != null)
         {
-            gasValueText.text = "Gas Input: " + Mathf.RoundToInt(gasPercent) + "%";
+            gasValueText.text =
+                "Gas Input: " +
+                Mathf.RoundToInt(gasPercent) +
+                "%";
         }
     }
 
-    private void UpdateNaturalGasFlow()
+    // =========================
+    // 外部呼叫
+    // 啟動燈泡
+    // =========================
+
+    public void ActivateLightbulb()
     {
-        if (naturalGasFlow == null)
-            return;
+        // 允許燈泡亮起
+        lightbulbActivated = true;
 
-        var emission = naturalGasFlow.emission;
-
-        emission.rateOverTime = Mathf.Lerp(
-            minGasEmissionRate,
-            maxGasEmissionRate,
-            gasPercent / 100f
-        );
+        // 更新燈泡亮度
+        UpdateLightbulbBrightness();
     }
 
-    private void UpdateHRSGFire()
+    // =========================
+    // 外部呼叫
+    // 關閉燈泡
+    // =========================
+    public void DeactivateLightbulb()
     {
-        if (hrsgFire == null)
-            return;
+        // 禁止燈泡亮起
+        lightbulbActivated = false;
 
-        var emission = hrsgFire.emission;
-
-        emission.rateOverTime = Mathf.Lerp(
-            minFireEmissionRate,
-            maxFireEmissionRate,
-            gasPercent / 100f
-        );
+        // 關閉燈泡外觀
+        TurnOffLightbulbVisual();
     }
 
-    private void UpdateControlledParticles()
-    {
-        if (particleRateControls == null)
-            return;
-
-        float t = gasPercent / 100f;
-
-        foreach (ParticleRateControl item in particleRateControls)
-        {
-            if (item == null || item.particle == null)
-                continue;
-
-            var emission = item.particle.emission;
-
-            emission.rateOverTime = Mathf.Lerp(
-                item.minRate,
-                item.maxRate,
-                t
-            );
-        }
-    }
+    // =========================
+    // 更新燈泡亮度
+    // =========================
 
     private void UpdateLightbulbBrightness()
     {
+        // 正規化天然氣百分比
+        // 例如 50% -> 0.5
         float normalizedGas = gasPercent / 100f;
 
+        // 如果天然氣接近 0
+        // 關燈
         if (gasPercent <= 0.01f)
         {
             TurnOffLightbulbVisual();
             return;
         }
 
-        if (bulbRenderer != null && lightOnMaterial != null)
+        // 切換成發光材質
+        if (bulbRenderer != null && runtimeLightMaterial != null)
         {
-            bulbRenderer.material = lightOnMaterial;
+            bulbRenderer.material = runtimeLightMaterial;
         }
 
+        // 控制 Point Light 強度
         if (bulbLight != null)
         {
             bulbLight.intensity = Mathf.Lerp(
@@ -219,7 +277,8 @@ public class FuelPowerController : MonoBehaviour
             );
         }
 
-        if (lightOnMaterial != null)
+        // 控制 Emission 強度
+        if (runtimeLightMaterial != null)
         {
             float emissionIntensity = Mathf.Lerp(
                 0f,
@@ -227,53 +286,161 @@ public class FuelPowerController : MonoBehaviour
                 normalizedGas
             );
 
-            lightOnMaterial.SetColor(
+            runtimeLightMaterial.SetColor(
                 "_EmissionColor",
                 emissionColor * emissionIntensity
             );
         }
     }
 
+    // =========================
+    // 關閉燈泡
+    // =========================
+
     private void TurnOffLightbulbVisual()
     {
+        // 切回玻璃材質
         if (bulbRenderer != null && glassMaterial != null)
         {
             bulbRenderer.material = glassMaterial;
         }
 
+        // 關閉 Point Light
         if (bulbLight != null)
         {
             bulbLight.intensity = 0f;
         }
+    }
 
-        if (lightOnMaterial != null)
+    // =========================
+    // 更新天然氣流量
+    // =========================
+
+    private void UpdateNaturalGasFlow()
+    {
+        if (naturalGasFlow == null)
+            return;
+
+        // 取得 Emission 模組
+        var emission = naturalGasFlow.emission;
+
+        // 根據 Slider 調整流量
+        emission.rateOverTime = Mathf.Lerp(
+            minGasEmissionRate,
+            maxGasEmissionRate,
+            gasPercent / 100f
+        );
+    }
+
+    // =========================
+    // 更新蒸氣流量
+    // =========================
+    private void UpdateSteamFlow()
+    {
+        // 如果沒有設定 Particle
+        if (steamFlows == null)
+            return;
+
+        // 逐一控制每條蒸氣
+        foreach (ParticleSystem steamFlow in steamFlows)
         {
-            lightOnMaterial.SetColor("_EmissionColor", Color.black);
+            if (steamFlow == null)
+                continue;
+
+            // 取得 Emission 模組
+            var emission = steamFlow.emission;
+
+            // 根據 Slider 調整流量
+            emission.rateOverTime = Mathf.Lerp(
+                minSteamEmissionRate,
+                maxSteamEmissionRate,
+                gasPercent / 100f
+            );
         }
     }
 
-    private void UpdateElectricLines()
+    // =========================
+    // 更新冷卻水流量
+    // =========================
+
+    private void UpdateCoolingWaterFlow()
     {
-        if (electricLineControls == null)
+        // 如果沒有設定 Particle
+        if (coolingWaterFlows == null)
             return;
 
-        float t = gasPercent / 100f;
-
-        foreach (ElectricLineControl item in electricLineControls)
+        // 逐一控制每條水流
+        foreach (ParticleSystem waterFlow in coolingWaterFlows)
         {
-            if (item == null || item.lineRenderer == null)
+            if (waterFlow == null)
                 continue;
 
-            float width = Mathf.Lerp(item.minWidth, item.maxWidth, t);
+            // 取得 Emission 模組
+            var emission = waterFlow.emission;
 
-            item.lineRenderer.startWidth = width;
-            item.lineRenderer.endWidth = width;
-
-            if (item.lineMaterial != null)
-            {
-                Color finalEmission = item.emissionColor * Mathf.Lerp(0f, item.maxEmissionIntensity, t);
-                item.lineMaterial.SetColor("_EmissionColor", finalEmission);
-            }
+            // 根據 Slider 調整流量
+            emission.rateOverTime = Mathf.Lerp(
+                minCoolingEmissionRate,
+                maxCoolingEmissionRate,
+                gasPercent / 100f
+            );
         }
+    }
+
+    // =========================
+    // 更新 HRSG 火焰
+    // =========================
+
+    private void UpdateHRSGFire()
+    {
+        if (hrsgFire == null)
+            return;
+
+        // 取得 Emission 模組
+        var emission = hrsgFire.emission;
+
+        // 根據 Slider 調整火焰大小
+        emission.rateOverTime = Mathf.Lerp(
+            minFireEmissionRate,
+            maxFireEmissionRate,
+            gasPercent / 100f
+        );
+    }
+
+    // =========================
+    // 重置整個系統
+    // =========================
+
+    public void ResetFuelSystem()
+    {
+        // 關閉燈泡
+        lightbulbActivated = false;
+
+        // Slider 回到 0
+        gasPercent = 0f;
+
+        // 更新 Slider
+        if (gasSlider != null)
+        {
+            gasSlider.value = 0f;
+        }
+
+        // 更新 UI
+        UpdateGasUI();
+
+        // 關燈
+        TurnOffLightbulbVisual();
+
+        // 更新天然氣
+        UpdateNaturalGasFlow();
+
+        // 更新蒸氣
+        UpdateSteamFlow();
+
+        // 更新冷卻水流量
+        UpdateCoolingWaterFlow();
+
+        // 更新火焰
+        UpdateHRSGFire();
     }
 }
