@@ -417,7 +417,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tourController: {fileID: 976783940}
-  stepIndex: 2
+  stepIndex: 1
   backgroundRenderer: {fileID: 0}
   normalColor: {r: 0, g: 0, b: 0, a: 0}
   hoverColor: {r: 0, g: 0, b: 0, a: 0.8235294}
