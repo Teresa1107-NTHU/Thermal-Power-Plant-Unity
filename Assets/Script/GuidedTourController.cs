@@ -57,6 +57,12 @@ public class GuidedTourController : MonoBehaviour
     public TourStep[] steps;
 
     // =========================
+    // 是否使用 Unity 內建 UI
+    // =========================
+    [Header("是否使用 Unity 內建教學 UI")]
+    public bool useInternalUI = true;
+
+    // =========================
     // UI 文字
     // =========================
     [Header("UI")]
@@ -181,14 +187,20 @@ public class GuidedTourController : MonoBehaviour
         }
 
         // 重置 UI 文字
-        titleText.text = "Natural Gas Power Plant";
+        if (useInternalUI)
+        {
+            if (titleText != null)
+                titleText.text = "Natural Gas Power Plant";
 
-        bodyText.text =
-            "Press Start to begin the guided tour.";
+            if (bodyText != null)
+                bodyText.text = "Press Start to begin the guided tour.";
 
-        nextButtonText.text = "Start";
+            if (nextButtonText != null)
+                nextButtonText.text = "Start";
 
-        previousButton.interactable = false;
+            if (previousButton != null)
+                previousButton.interactable = false;
+        }
 
         // 滑桿回到 50%
         if (controlSlider != null)
@@ -222,17 +234,25 @@ public class GuidedTourController : MonoBehaviour
         TourStep step = steps[index];
 
         // 更新 UI
-        titleText.text = step.title;
-        bodyText.text = step.description;
+        if (useInternalUI)
+        {
+            if (titleText != null)
+                titleText.text = step.title;
 
-        // 上一步按鈕控制
-        previousButton.interactable = index > 0;
+            if (bodyText != null)
+                bodyText.text = step.description;
 
-        // 最後一步顯示 Finished
-        nextButtonText.text =
-            index >= steps.Length - 1
-            ? "Finished"
-            : "Next";
+            if (previousButton != null)
+                previousButton.interactable = index > 0;
+
+            if (nextButtonText != null)
+            {
+                nextButtonText.text =
+                    index >= steps.Length - 1
+                    ? "Finished"
+                    : "Next";
+            }
+        }
 
         // 啟動對應設備動畫
         RunStepAction(step.actionName);

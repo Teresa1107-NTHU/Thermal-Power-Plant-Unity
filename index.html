@@ -121,16 +121,36 @@
 
       loadingBar.style.display = "block";
 
+        let unityInstanceRef = null;
+
+        window.addEventListener("message", function (event) {
+            if (!unityInstanceRef) return;
+
+            const data = event.data;
+
+            if (!data || data.type !== "THERMAL_COMMAND") return;
+
+            unityInstanceRef.SendMessage(
+                "ThermalWebBridge",
+                "HandleWebCommand",
+                data.command
+            );
+        });
+
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
-        }).then((unityInstance) => {
-          loadingBar.style.display = "none";
-        }).catch((message) => {
-          alert(message);
-        });
+          createUnityInstance(canvas, config, (progress) => {
+              progressBarFull.style.width = 100 * progress + "%";
+          }).then((unityInstance) => {
+
+              unityInstanceRef = unityInstance;
+
+              loadingBar.style.display = "none";
+
+          }).catch((message) => {
+              alert(message);
+          });
       };
       document.body.appendChild(script);
     </script>

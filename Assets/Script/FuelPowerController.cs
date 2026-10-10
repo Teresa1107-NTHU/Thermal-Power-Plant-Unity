@@ -201,6 +201,30 @@ public class FuelPowerController : MonoBehaviour
         UpdateHRSGFire();
     }
 
+    public void SetGasPercent(float value)
+    {
+        value = Mathf.Clamp(value, 0f, 100f);
+
+        gasPercent = value;
+
+        if (gasSlider != null)
+        {
+            gasSlider.SetValueWithoutNotify(value);
+        }
+
+        UpdateGasUI();
+
+        if (lightbulbActivated)
+        {
+            UpdateLightbulbBrightness();
+        }
+
+        UpdateNaturalGasFlow();
+        UpdateSteamFlow();
+        UpdateCoolingWaterFlow();
+        UpdateHRSGFire();
+    }
+
     // =========================
     // 更新天然氣百分比文字
     // =========================
