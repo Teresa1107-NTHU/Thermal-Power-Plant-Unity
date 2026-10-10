@@ -16,56 +16,19 @@ public class ThermalWebMessageReceiver : MonoBehaviour
 
         switch (command)
         {
+            case "NEXT":
+                if (tourController != null)
+                    tourController.NextStep();
+                break;
+
+            case "PREVIOUS":
+                if (tourController != null)
+                    tourController.PreviousStep();
+                break;
+
             case "RESET":
-                ResetAll();
-                break;
-
-            case "STEP_0":
-                GoToStep(0);
-                break;
-
-            case "STEP_1":
-                GoToStep(1);
-                break;
-
-            case "STEP_2":
-                GoToStep(2);
-                break;
-
-            case "STEP_3":
-                GoToStep(3);
-                break;
-
-            case "STEP_4":
-                GoToStep(4);
-                break;
-
-            case "STEP_5":
-                GoToStep(5);
-                break;
-
-            case "GAS":
-                GoToStep(0);
-                break;
-
-            case "BOILER":
-                GoToStep(1);
-                break;
-
-            case "STEAM":
-                GoToStep(2);
-                break;
-
-            case "COOLING":
-                GoToStep(3);
-                break;
-
-            case "ELECTRICITY":
-                GoToStep(4);
-                break;
-
-            case "LIGHTBULB":
-                GoToStep(5);
+                if (tourController != null)
+                    tourController.ResetTour();
                 break;
         }
     }

@@ -128,13 +128,23 @@
 
             const data = event.data;
 
-            if (!data || data.type !== "THERMAL_COMMAND") return;
+            if (!data) return;
 
-            unityInstanceRef.SendMessage(
-                "ThermalWebBridge",
-                "HandleWebCommand",
-                data.command
-            );
+            if (data.type === "THERMAL_COMMAND") {
+                unityInstanceRef.SendMessage(
+                    "ThermalWebBridge",
+                    "HandleWebCommand",
+                    data.command
+                );
+            }
+
+            if (data.type === "THERMAL_GAS") {
+                unityInstanceRef.SendMessage(
+                    "ThermalWebBridge",
+                    "SetGasPercent",
+                    data.value
+                );
+            }
         });
 
       var script = document.createElement("script");
