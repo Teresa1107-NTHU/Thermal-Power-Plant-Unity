@@ -202,10 +202,10 @@ public class GuidedTourController : MonoBehaviour
                 previousButton.interactable = false;
         }
 
-        // 滑桿回到 50%
+        // 滑桿回到 0%
         if (controlSlider != null)
         {
-            controlSlider.value = 50f;
+            controlSlider.value = 0f;
         }
 
         // 回到初始相機位置

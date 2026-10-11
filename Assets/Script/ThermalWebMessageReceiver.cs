@@ -70,4 +70,9 @@ public class ThermalWebMessageReceiver : MonoBehaviour
     {
         HandleWebCommand("BOILER");
     }
+
+    public void TestNext()
+    {
+        HandleWebCommand("NEXT");
+    }
 }

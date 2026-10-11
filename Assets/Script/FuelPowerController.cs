@@ -22,7 +22,7 @@ public class FuelPowerController : MonoBehaviour
 
     [Header("目前天然氣輸入百分比")]
     [Range(0f, 100f)]
-    public float gasPercent = 50f;
+    public float gasPercent = 0f;
 
     // =========================
     // 燈泡控制
